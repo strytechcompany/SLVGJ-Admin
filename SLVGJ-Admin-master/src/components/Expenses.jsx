@@ -12,7 +12,8 @@ export default function Expenses({ pink, lightPink, softPink }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newExpenseForm, setNewExpenseForm] = useState({
     amount: '',
-    description: ''
+    description: '',
+    date: ''
   });
 
   const API_BASE = 'http://localhost:3000';
@@ -123,7 +124,8 @@ export default function Expenses({ pink, lightPink, softPink }) {
 
     const payload = {
       amount: Number(newExpenseForm.amount),
-      description: newExpenseForm.description.trim()
+      description: newExpenseForm.description.trim(),
+      date: newExpenseForm.date || new Date().toISOString().split('T')[0]
     };
 
     try {
@@ -137,7 +139,7 @@ export default function Expenses({ pink, lightPink, softPink }) {
         const data = await res.json();
         alert('✅ Expense added successfully!');
         setShowAddModal(false);
-        setNewExpenseForm({ amount: '', description: '' });
+        setNewExpenseForm({ amount: '', description: '', date: '' });
         fetchAllExpenses(); // refresh list
       } else {
         throw new Error();
@@ -155,7 +157,7 @@ export default function Expenses({ pink, lightPink, softPink }) {
       setFilteredExpenses(updatedExpenses);
       calculateTotal(updatedExpenses);
       setShowAddModal(false);
-      setNewExpenseForm({ amount: '', description: '' });
+      setNewExpenseForm({ amount: '', description: '', date: '' });
       alert('✅ Expense added (demo mode)');
     }
   };
@@ -246,7 +248,7 @@ export default function Expenses({ pink, lightPink, softPink }) {
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <input
           type="text"
-          placeholder="Search by Expense ID, Date or description..."
+          placeholder="Search by Date or description..."
           value={searchTerm}
           onChange={(e) => handleSearch(e.target.value)}
           style={{
@@ -271,7 +273,6 @@ export default function Expenses({ pink, lightPink, softPink }) {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: lightPink }}>
-              <th style={{ padding: '20px 24px', textAlign: 'left', fontWeight: '600', color: '#555', fontSize: '14px' }}>Expense ID</th>
               <th style={{ padding: '20px 24px', textAlign: 'left', fontWeight: '600', color: '#555', fontSize: '14px' }}>Date</th>
               <th style={{ padding: '20px 24px', textAlign: 'left', fontWeight: '600', color: '#555', fontSize: '14px' }}>Description</th>
               <th style={{ padding: '20px 24px', textAlign: 'right', fontWeight: '600', color: '#555', fontSize: '14px' }}>Amount</th>
@@ -293,7 +294,7 @@ export default function Expenses({ pink, lightPink, softPink }) {
             ) : (
               filteredExpenses.map((exp) => (
                 <tr
-                  key={exp.id}
+                  key={exp.id || exp.date + exp.description}
                   style={{
                     borderTop: `1px solid ${softPink}`,
                     transition: 'background-color 0.2s'
@@ -301,7 +302,6 @@ export default function Expenses({ pink, lightPink, softPink }) {
                   onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = lightPink)}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'white')}
                 >
-                  <td style={{ padding: '20px 24px', fontWeight: '600', color: '#1f2937' }}>{exp.id}</td>
                   <td style={{ padding: '20px 24px', color: '#666' }}>{formatDate(exp.date)}</td>
                   <td style={{ padding: '20px 24px', color: '#333' }}>{exp.description}</td>
                   <td style={{
@@ -349,6 +349,61 @@ export default function Expenses({ pink, lightPink, softPink }) {
             <form onSubmit={handleAddExpenseSubmit}>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
+                  Date
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* Day */}
+                  <select
+                    value={newExpenseForm.date ? newExpenseForm.date.split('-')[2] : ''}
+                    onChange={(e) => {
+                      const y = newExpenseForm.date ? newExpenseForm.date.split('-')[0] : new Date().getFullYear();
+                      const m = newExpenseForm.date ? newExpenseForm.date.split('-')[1] : String(new Date().getMonth() + 1).padStart(2, '0');
+                      setNewExpenseForm({ ...newExpenseForm, date: `${y}-${m}-${e.target.value}` });
+                    }}
+                    required
+                    style={{ flex: 1, padding: '14px', borderRadius: '12px', border: `2px solid ${softPink}`, outline: 'none', background: 'white', color: '#1f2937' }}
+                  >
+                    <option value="" disabled>Day</option>
+                    {Array.from({length: 31}, (_, i) => String(i + 1).padStart(2, '0')).map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+
+                  {/* Month */}
+                  <select
+                    value={newExpenseForm.date ? newExpenseForm.date.split('-')[1] : ''}
+                    onChange={(e) => {
+                      const y = newExpenseForm.date ? newExpenseForm.date.split('-')[0] : new Date().getFullYear();
+                      const d = newExpenseForm.date ? newExpenseForm.date.split('-')[2] : '01';
+                      setNewExpenseForm({ ...newExpenseForm, date: `${y}-${e.target.value}-${d}` });
+                    }}
+                    required
+                    style={{ flex: 1, padding: '14px', borderRadius: '12px', border: `2px solid ${softPink}`, outline: 'none', background: 'white', color: '#1f2937' }}
+                  >
+                    <option value="" disabled>Month</option>
+                    <option value="01">Jan</option><option value="02">Feb</option><option value="03">Mar</option>
+                    <option value="04">Apr</option><option value="05">May</option><option value="06">Jun</option>
+                    <option value="07">Jul</option><option value="08">Aug</option><option value="09">Sep</option>
+                    <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                  </select>
+
+                  {/* Year */}
+                  <select
+                    value={newExpenseForm.date ? newExpenseForm.date.split('-')[0] : ''}
+                    onChange={(e) => {
+                      const m = newExpenseForm.date ? newExpenseForm.date.split('-')[1] : String(new Date().getMonth() + 1).padStart(2, '0');
+                      const d = newExpenseForm.date ? newExpenseForm.date.split('-')[2] : '01';
+                      setNewExpenseForm({ ...newExpenseForm, date: `${e.target.value}-${m}-${d}` });
+                    }}
+                    required
+                    style={{ flex: 1, padding: '14px', borderRadius: '12px', border: `2px solid ${softPink}`, outline: 'none', background: 'white', color: '#1f2937' }}
+                  >
+                    <option value="" disabled>Year</option>
+                    {Array.from({length: 10}, (_, i) => new Date().getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
                   Amount (₹)
                 </label>
                 <input
@@ -362,7 +417,8 @@ export default function Expenses({ pink, lightPink, softPink }) {
                     border: `2px solid ${softPink}`,
                     background: 'white',
                     color: '#1f2937',
-                    fontSize: '17px'
+                    fontSize: '17px',
+                    boxSizing: 'border-box'
                   }}
                   placeholder="0"
                   required
@@ -384,7 +440,8 @@ export default function Expenses({ pink, lightPink, softPink }) {
                     border: `2px solid ${softPink}`,
                     background: 'white',
                     color: '#1f2937',
-                    resize: 'vertical'
+                    resize: 'vertical',
+                    boxSizing: 'border-box'
                   }}
                   placeholder="What was this expense for?"
                   required

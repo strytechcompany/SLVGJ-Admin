@@ -17,7 +17,7 @@ export default function Dealers({ pink, lightPink, softPink }) {
   // Modals
   const [showAddDealerModal, setShowAddDealerModal] = useState(false);
   const [newDealerForm, setNewDealerForm] = useState({
-    dealer_id: '', name: '', phone: '', address: ''
+    dealer_id: '', name: '', phone: '', address: '', advance_balance: '', old_balance: ''
   });
 
   const [showAddTransactionModal, setShowAddTransactionModal] = useState(false);
@@ -58,7 +58,7 @@ export default function Dealers({ pink, lightPink, softPink }) {
     fetchAllDealers();
   }, []);
 
-  const fetchRatesAndLiabilities = async () => {
+  const fetchRatesAndLiabilities = async (dealersList = []) => {
     try {
       const rateRes = await fetch(`${API_BASE}/api/admin/get-rate`);
       let liveGoldRate = 6245;
@@ -68,22 +68,14 @@ export default function Dealers({ pink, lightPink, softPink }) {
         setGoldRate(liveGoldRate);
       }
 
-      const transRes = await fetch(`${API_BASE}/api/admin/get-transactions`);
-      if (transRes.ok) {
-        const transData = await transRes.json();
-        const allTrans = transData.transactions || [];
-        let debtGrams = 0;
-        let creditGrams = 0;
-        allTrans.forEach(t => {
-          if (t.type === 'DEBT') {
-            debtGrams += (Number(t.gram) || 0);
-          } else if (t.type === 'CREDIT') {
-            creditGrams += (Number(t.gram) || 0);
-          }
-        });
-        setTotalDebt(debtGrams * liveGoldRate);
-        setTotalCredit(creditGrams * liveGoldRate);
-      }
+      let debtGrams = 0;
+      let creditGrams = 0;
+      dealersList.forEach(d => {
+        debtGrams += (Number(d.old_balance) || 0);
+        creditGrams += (Number(d.advance_balance) || 0);
+      });
+      setTotalDebt(debtGrams);
+      setTotalCredit(creditGrams);
     } catch (err) {
       console.error(err);
     }
@@ -101,12 +93,11 @@ export default function Dealers({ pink, lightPink, softPink }) {
       }));
       setDealers(allDealers);
       setFilteredDealers(allDealers);
-      await fetchRatesAndLiabilities();
+      await fetchRatesAndLiabilities(allDealers);
     } catch {
       setDealers(demoDealersData);
       setFilteredDealers(demoDealersData);
-      setTotalDebt(14285250);
-      setTotalCredit(8212000);
+      await fetchRatesAndLiabilities(demoDealersData);
     } finally {
       setLoading(false);
     }
@@ -164,7 +155,7 @@ export default function Dealers({ pink, lightPink, softPink }) {
       if (res.ok) {
         alert('✅ Dealer added successfully!');
         setShowAddDealerModal(false);
-        setNewDealerForm({ dealer_id: '', name: '', phone: '', address: '' });
+        setNewDealerForm({ dealer_id: '', name: '', phone: '', address: '', advance_balance: '', old_balance: '' });
         fetchAllDealers();
       } else throw new Error();
     } catch {
@@ -172,7 +163,7 @@ export default function Dealers({ pink, lightPink, softPink }) {
       setDealers(prev => [...prev, newDealer]);
       setFilteredDealers(prev => [...prev, newDealer]);
       setShowAddDealerModal(false);
-      setNewDealerForm({ dealer_id: '', name: '', phone: '', address: '' });
+      setNewDealerForm({ dealer_id: '', name: '', phone: '', address: '', advance_balance: '', old_balance: '' });
       alert('✅ Dealer added (demo)');
     }
   };
@@ -280,7 +271,7 @@ export default function Dealers({ pink, lightPink, softPink }) {
             <div style={{ background: '#fee2e2', color: '#ef4444', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>↓</div>
             <div>
               <div style={{ fontSize: '15px', color: '#ff0000', fontWeight: '600' }}>TOTAL DEBT</div>
-              <div style={{ fontSize: '42px', fontWeight: '700', color: '#ff0000' }}>{formatCurrency(totalDebt)}</div>
+              <div style={{ fontSize: '42px', fontWeight: '700', color: '#ff0000' }}>{totalDebt.toLocaleString()}g</div>
               
             </div>
           </div>
@@ -290,7 +281,7 @@ export default function Dealers({ pink, lightPink, softPink }) {
             <div style={{ background: '#dbeafe', color: '#3b82f6', width: '42px', height: '42px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>↑</div>
             <div>
               <div style={{ fontSize: '15px', color: '#006c09', fontWeight: '600' }}>TOTAL CREDIT</div>
-              <div style={{ fontSize: '42px', fontWeight: '700', color:'#006c09' }}>{formatCurrency(totalCredit)}</div>
+              <div style={{ fontSize: '42px', fontWeight: '700', color:'#006c09' }}>{totalCredit.toLocaleString()}g</div>
               
             </div>
           </div>
@@ -319,6 +310,7 @@ export default function Dealers({ pink, lightPink, softPink }) {
             <tr style={{ background: lightPink }}>
               <th style={{ padding: '20px 24px', textAlign: 'left', fontWeight: '600', color: '#555', fontSize: '14px' }}>Dealer ID</th>
               <th style={{ padding: '20px 24px', textAlign: 'left', fontWeight: '600', color: '#555', fontSize: '14px' }}>Dealer Name</th>
+              <th style={{ padding: '20px 24px', textAlign: 'left', fontWeight: '600', color: '#555', fontSize: '14px' }}>Balances</th>
               <th style={{ padding: '20px 24px', textAlign: 'left', fontWeight: '600', color: '#555', fontSize: '14px' }}>Address</th>
               <th style={{ padding: '20px 24px', textAlign: 'left', fontWeight: '600', color: '#555', fontSize: '14px' }}>Phone</th>
               <th style={{ padding: '20px 24px', textAlign: 'right', width: '60px' }}></th>
@@ -334,6 +326,12 @@ export default function Dealers({ pink, lightPink, softPink }) {
                 <tr key={dealer.dealer_id} onClick={() => handleRowClick(dealer)} style={{ borderTop: `1px solid ${softPink}`, cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.backgroundColor = lightPink} onMouseLeave={e => e.currentTarget.style.backgroundColor = 'white'}>
                   <td style={{ padding: '20px 24px', fontWeight: '600' }}>{dealer.dealer_id}</td>
                   <td style={{ padding: '20px 24px', fontWeight: '500' }}>{dealer.name}</td>
+                  <td style={{ padding: '20px 24px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#16a34a' }}>Adv: {dealer.advance_balance || 0}g</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#ef4444' }}>Old: {dealer.old_balance || 0}g</span>
+                    </div>
+                  </td>
                   <td style={{ padding: '20px 24px', color: '#666' }}>{dealer.address}</td>
                   <td style={{ padding: '20px 24px', color: '#555' }}>{dealer.phone}</td>
                   <td style={{ padding: '20px 24px', textAlign: 'right' }}>
@@ -411,7 +409,11 @@ export default function Dealers({ pink, lightPink, softPink }) {
               <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Dealer ID</label><input type="text" value={newDealerForm.dealer_id} onChange={e => setNewDealerForm({ ...newDealerForm, dealer_id: e.target.value })} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `2px solid ${softPink}`, background: 'white', color: '#333' }} required /></div>
               <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Dealer Name</label><input type="text" value={newDealerForm.name} onChange={e => setNewDealerForm({ ...newDealerForm, name: e.target.value })} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `2px solid ${softPink}`, background: 'white', color: '#333' }} required /></div>
               <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Phone Number</label><input type="tel" value={newDealerForm.phone} onChange={e => setNewDealerForm({ ...newDealerForm, phone: e.target.value })} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `2px solid ${softPink}`, background: 'white', color: '#333' }} required /></div>
-              <div style={{ marginBottom: '24px' }}><label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Address / Region</label><input type="text" value={newDealerForm.address} onChange={e => setNewDealerForm({ ...newDealerForm, address: e.target.value })} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `2px solid ${softPink}`, background: 'white', color: '#333' }} required /></div>
+              <div style={{ marginBottom: '16px' }}><label style={{ display: 'block', marginBottom: '6px', fontWeight: '600' }}>Address / Region</label><input type="text" value={newDealerForm.address} onChange={e => setNewDealerForm({ ...newDealerForm, address: e.target.value })} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `2px solid ${softPink}`, background: 'white', color: '#333' }} required /></div>
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ flex: 1 }}><label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#16a34a' }}>Advance Balance</label><input type="number" step="0.01" value={newDealerForm.advance_balance} onChange={e => setNewDealerForm({ ...newDealerForm, advance_balance: e.target.value })} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `2px solid #bbf7d0`, background: 'white', color: '#333' }} /></div>
+                <div style={{ flex: 1 }}><label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#ef4444' }}>Old Balance</label><input type="number" step="0.01" value={newDealerForm.old_balance} onChange={e => setNewDealerForm({ ...newDealerForm, old_balance: e.target.value })} style={{ width: '100%', padding: '14px', borderRadius: '12px', border: `2px solid #fecaca`, background: 'white', color: '#333' }} /></div>
+              </div>
               <div style={{ display: 'flex', gap: '12px' }}>
                 <button type="button" onClick={() => setShowAddDealerModal(false)} style={{ flex: 1, padding: '14px', background: 'white', border: `2px solid ${softPink}`, borderRadius: '9999px', color: '#831843', fontWeight: '600' }}>Cancel</button>
                 <button type="submit" style={{ flex: 1, padding: '14px', background: pink, color: 'white', border: 'none', borderRadius: '9999px', fontWeight: '600' }}>Register Dealer</button>

@@ -1,4 +1,4 @@
-// src/components/DashboardHome.jsx
+  // src/components/DashboardHome.jsx
 import { useState, useEffect } from 'react';
 
 export default function DashboardHome({ pink, lightPink, softPink }) {
@@ -37,6 +37,38 @@ export default function DashboardHome({ pink, lightPink, softPink }) {
   const formatINR = (num) => `₹${(num / 100000).toFixed(1)}L`;
 
 
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!window.confirm("WARNING: Uploading a backup will erase all current data and restore from the file. Proceed?")) {
+      event.target.value = null; // reset
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('http://localhost:3000/api/admin/upload-excel', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        alert("✅ Backup restored successfully! Please refresh the page.");
+        window.location.reload();
+      } else {
+        const errorData = await res.json();
+        alert("❌ Failed to restore backup: " + (errorData.error || "Unknown error"));
+      }
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error uploading backup.");
+    }
+    event.target.value = null; // reset
+  };
 
   // Open modal when user clicks on Gold or Silver card
   const openRateModal = (type) => {
@@ -182,7 +214,13 @@ export default function DashboardHome({ pink, lightPink, softPink }) {
                 📥 Download Report
               </button>
 
-              {/* Create New Fund Button with Hover */}
+              <input 
+                type="file" 
+                id="backup-upload" 
+                style={{ display: 'none' }} 
+                accept=".xlsx, .xls"
+                onChange={handleFileUpload}
+              />
               <button
                 style={{
                   padding: '12px 28px',
@@ -203,8 +241,9 @@ export default function DashboardHome({ pink, lightPink, softPink }) {
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = '0 4px 15px rgba(225, 29, 138, 0.3)';
                 }}
+                onClick={() => document.getElementById('backup-upload').click()}
               >
-                ✨ Create New Fund
+                📤 Upload Backup
               </button>
             </div>
           </div>
@@ -220,7 +259,7 @@ export default function DashboardHome({ pink, lightPink, softPink }) {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#831843', fontSize: '15px' }}>🪙 Gold Rate (24k/10g)</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#831843', fontSize: '15px' }}>🪙 Gold Rate (22k)</div>
               <div style={{ fontSize: '42px', fontWeight: '700', margin: '12px 0 6px' }}>₹{goldRate}</div>
             </div>
 
@@ -237,7 +276,7 @@ export default function DashboardHome({ pink, lightPink, softPink }) {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#831843', fontSize: '15px' }}>🥈 Silver Rate (1g)</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#831843', fontSize: '15px' }}>🥈 Silver Rate </div>
               <div style={{ fontSize: '42px', fontWeight: '700', margin: '12px 0 6px' }}>₹{silverRate}</div>
             </div>
 
@@ -272,59 +311,7 @@ export default function DashboardHome({ pink, lightPink, softPink }) {
           </div>
 
 
-    {/* Sales Weekly Trends */}
-          <div style={{
-            background: 'white',
-            borderRadius: '20px',
-            padding: '32px',
-            marginBottom: '32px',
-            border: `1px solid ${softPink}`
-          }}>
-            <h2 style={{ marginBottom: '28px', fontSize: '20px', fontWeight: '600' ,color : '#1f2937' }}>
-              Sales Weekly Trends
-            </h2>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'flex-end',
-              height: '320px',
-              gap: '20px',
-              borderBottom: '2px solid #eee',
-              paddingBottom: '10px'
-            }}>
-              {weeklyData.map((item, i) => {
-                const height = (item.revenue / maxRevenue) * 260;
-
-                return (
-                  <div key={i} style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end'
-                  }}>
-                    <div style={{ marginBottom: '6px', fontSize: '12px', color: '#666' }}>
-                      ₹{item.revenue}
-                    </div>
-
-                    <div style={{
-                      width: '100%',
-                      height: `${height}px`,
-                      background: i === 3 ? pink : '#f9a8d4',
-                      borderRadius: '10px 10px 0 0',
-                      transition: 'all 0.4s ease'
-                    }} />
-
-                    <div style={{ marginTop: '10px', fontSize: '13px', color: '#555', fontWeight: '500' }}>
-                      {item.day}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-
+   
       {/* Recent Transactions */}
       <div
           style={{

@@ -39,6 +39,14 @@ const transactionSchema = new Schema(
         date: {
             type: Date,
             default: Date.now
+        },
+        grams: {
+            type: Number,
+            default: 0
+        },
+        cumulative_grams: {
+            type: Number,
+            default: 0
         }
     }
 );

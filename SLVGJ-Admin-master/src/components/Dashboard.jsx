@@ -1,10 +1,11 @@
-// src/components/Dashboard.jsx
 import { useState } from 'react';
 import DashboardHome from './DashboardHome';
 import Expenses from './Expenses';
 import ChitFunds from './ChitFunds';
 import Sales from './Sales';
 import Dealers from './Dealers';
+import Stock from './Stock';
+import MonthlyReport from './MonthlyReport';
 
 function Dashboard() {
   const handleLogout = () => {
@@ -20,11 +21,12 @@ function Dashboard() {
 
   const menuItems = [
     { name: 'Dashboard', icon: '🏠', component: DashboardHome },
-
+    { name: 'Monthly Report', icon: '📊', component: MonthlyReport },
     { name: 'Chit Funds', icon: '💼', component: ChitFunds },
     { name: 'Sales', icon: '📈', component: Sales },
     { name: 'Dealers', icon: '👥', component: Dealers },
-    { name: 'Expenses', icon: '💰', component: Expenses }
+    { name: 'Expenses', icon: '💰', component: Expenses },
+    { name: 'Stock', icon: '📦', component: Stock }
   ];
 
   const CurrentComponent = menuItems.find(item => item.name === activeTab)?.component || DashboardHome;

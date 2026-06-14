@@ -36,6 +36,17 @@ const chitfundSchema = new Schema({
         type: Boolean,
         default: false
     },
+    product_issued: {
+        type: Boolean,
+        default: false
+    },
+    start_month: {
+        type: String,
+        enum: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    },
+    start_year: {
+        type: Number
+    },
     start_date: {
         type: Date,
         default: Date.now
