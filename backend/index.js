@@ -15,6 +15,7 @@ import Rate from "./model/rate.js";
 import ChitfundUser from "./model/chitfunds_user.js";
 import Chitfund from "./model/chitfund.js";
 import ChitfundTransaction from "./model/chitfund_transactions.js";
+import { getSaleModel } from "./model/sale.js";
 
 dotenv.config();
 
@@ -360,6 +361,7 @@ app.post("/api/admin/login", async (req, res) => {
         res.status(200).json({ message: "Login Successfully", user });
     }
     catch(err) {
+        console.error("Login Error:", err);
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
@@ -664,6 +666,81 @@ app.get("/api/admin/get-rate", (req, res) => {
         const silver_rate = rows.find(r => r.type === 'silver') || { rate: 0 };
         res.status(200).json({ gold_rate, silver_rate });
     });
+});
+
+// Sales Section
+
+app.get("/api/admin/bills", async (req, res) => {
+    try {
+        const Sale = getSaleModel();
+        const sales = await Sale.find({}).sort({ createdAt: -1 });
+        
+        const formattedBills = sales.map(sale => {
+            let makingCharges = 0;
+            if (sale.issuedItems && sale.issuedItems.length > 0) {
+                makingCharges = sale.issuedItems.reduce((sum, item) => sum + (item.plus || 0), 0);
+            }
+            
+            return {
+                bill_id: (sale.issuedItems && sale.issuedItems[0]) ? sale.issuedItems[0].billNo : sale._id.toString(),
+                bill_datetime: sale.createdAt || sale.date,
+                customer_id: sale.customerDetails?.phone || "N/A",
+                customer_name: sale.customerDetails?.name || "Unknown",
+                customer_phone: sale.customerDetails?.phone || "N/A",
+                customer_address: "",
+                subtotal: sale.totalIssuedValue || 0,
+                making_charges: makingCharges,
+                cgst_amount: 0,
+                sgst_amount: 0,
+                total_gst_amount: 0,
+                final_net_amount: sale.totalIssuedValue || 0,
+                created_at: sale.createdAt || sale.date
+            };
+        });
+        
+        res.status(200).json({ bills: formattedBills });
+    } catch(err) {
+        console.error("Error fetching bills:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+app.get("/api/admin/bill-details/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const Sale = getSaleModel();
+        
+        // Try to find by billNo in issuedItems first, or fallback to _id
+        let sale = await Sale.findOne({ "issuedItems.billNo": id });
+        if (!sale) {
+            if (mongoose.Types.ObjectId.isValid(id)) {
+                sale = await Sale.findById(id);
+            }
+        }
+        
+        if (!sale) {
+            return res.status(404).json({ error: "Bill not found" });
+        }
+        
+        const formattedItems = (sale.issuedItems || []).map(item => ({
+            id: item._id ? item._id.toString() : uuidv4(),
+            bill_id: item.billNo || id,
+            product_id: item.serialNo || "",
+            item_name: item.itemName || "Unknown Item",
+            gross_weight: item.grossWeight || item.weight || 0,
+            stone_weight: item.stoneWeight || 0,
+            net_weight: item.netWeight || item.weight || 0,
+            purity: item.purity || "",
+            rate: item.sriCost || 0,
+            making_charge: item.plus || 0,
+            total: item.sriBill || 0
+        }));
+        
+        res.status(200).json({ bill: formattedItems });
+    } catch(err) {
+        console.error("Error fetching bill details:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
 });
 
 // Dealer Section
